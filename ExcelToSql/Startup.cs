@@ -29,13 +29,12 @@ namespace ExcelToSql
         
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers().AddFluentValidation(x => x.RegisterValidatorsFromAssemblyContaining<SendFilter>());
+            services.AddControllers().AddFluentValidation(x => x.RegisterValidatorsFromAssemblyContaining<SendFilterDto>());
             services.AddDbContext<AppDbContext>(o => {
                 o.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
             });
             services.AddSwaggerGen(o =>
             {
-
                 o.SwaggerDoc("v1", new OpenApiInfo
                 {
                     Version = "v1",

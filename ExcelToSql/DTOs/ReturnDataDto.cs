@@ -1,0 +1,10 @@
+﻿namespace ExcelToSql.DTOs
+{
+    public class ReturnDataDto
+    {
+        public int Count { get; set; }
+        public double totalSales { get; set; }
+        public double totalDiscounts { get; set; }
+        public double totalProfits { get; set; }
+    }
+}

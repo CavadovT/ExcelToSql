@@ -2,12 +2,15 @@
 using ExcelToSql.Data.Entites;
 using ExcelToSql.DTOs;
 using ExcelToSql.Interfaces;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace ExcelToSql.Controllers
@@ -19,10 +22,13 @@ namespace ExcelToSql.Controllers
     {
         private readonly AppDbContext _con;
         private readonly IEmailService _eservice;
+        private readonly IWebHostEnvironment _env;
 
-        public ExcelController(AppDbContext con)
+        public ExcelController(AppDbContext con, IWebHostEnvironment env, IEmailService eservice)
         {
             _con = con;
+            _env = env;
+            _eservice = eservice;
         }
 
         /// <summary>
@@ -76,16 +82,82 @@ namespace ExcelToSql.Controllers
             }
             return StatusCode(201,"datas saved to sql");
         }
-
+        /// <summary>
+        /// Get Methods
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
         [HttpGet]
-        public async Task<IActionResult> SendReport([FromQuery]SendFilter filter,[FromQuery] SendType type) 
+        public async Task<IActionResult> SendRepo([FromQuery] SendFilterDto filter, [FromQuery] SendType type)
         {
-            
+            List<ReturnDataDto> dataList = new List<ReturnDataDto>();
+            var datas = await _con.Examples.Where(e => e.Date <= filter.EndData && e.Date >= filter.StartData).AsQueryable().AsNoTracking().ToListAsync();
+            switch (type)
+            {
+                case SendType.Segment:
+                    datas.GroupBy(d => d.Segment).Select(data => new ReturnDataDto
+                    {
+                        Count = data.Count(),
+                        totalProfits = data.Sum(x => x.Profit),
+                        totalDiscounts = data.Sum(x => x.Discounts),
+                        totalSales = data.Sum(x => x.Sales),
+                    }).ToList();
+                    break;
+                case SendType.Country:
+                    datas.GroupBy(d => d.Country).Select(data => new ReturnDataDto
+                    {
+                        Count = data.Count(),
+                        totalProfits = data.Sum(x => x.Profit),
+                        totalDiscounts = data.Sum(x => x.Discounts),
+                        totalSales = data.Sum(x => x.Sales),
+                    }).ToList();
+                    break;
+                case SendType.Product:
+                    datas.GroupBy(d => d.Product).Select(data => new ReturnDataDto
+                    {
+                        Count = data.Count(),
+                        totalProfits = data.Sum(x => x.Profit),
+                        totalDiscounts = data.Sum(x => x.Discounts),
+                        totalSales = data.Sum(x => x.Sales),
+                    }).ToList();
+                    break;
+                case SendType.Discount:
+                    ReturnDataDto data = new ReturnDataDto();
+                    foreach (var item in datas.OrderBy(p => p.Product).ToList())
+                    {
+                        data.totalDiscounts = 1 - (item.SalePrice - item.Discounts) / 100;
+                        //data.totalDiscounts = 100 * (item.Discounts / item.salePrice);
+                        dataList.Add(data);
+                    }
+                    break;
+                default:
+                    break;
+            }
 
-            _eservice.SendEmail(filter.AcceptorEmail,"salam","hesabatiniz");
+            string fileName = Guid.NewGuid().ToString() + ".xlsx";
 
+            var pathFolder = Path.Combine(_env.WebRootPath, fileName);
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            using (var package = new ExcelPackage())
+            {
+                var workSheet = package.Workbook.Worksheets.Add("Sheet1").Cells[1, 1].LoadFromCollection(dataList, true);
+                package.SaveAs(pathFolder);
 
-            return Ok();
+                MemoryStream ms = new MemoryStream();
+
+                using (var file = new FileStream(pathFolder, FileMode.Open, FileAccess.Read))
+                {
+                    var bytes = new byte[file.Length];
+                    file.Read(bytes, 0, (int)file.Length);
+                    ms.Write(bytes, 0, (int)file.Length);
+                    file.Close();
+                    _eservice.SendEmail(filter.AcceptorEmail, "Salam", "Hesabatiniz", fileName, bytes);
+                }
+
+                return Ok("Sended");
+            }
+
         }
     }
 }

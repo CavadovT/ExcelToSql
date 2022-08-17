@@ -3,13 +3,13 @@ using System;
 
 namespace ExcelToSql.DTOs
 {
-    public class SendFilter
+    public class SendFilterDto
     {
         public DateTime StartData { get; set; }
         public DateTime EndData { get; set; }
         public string AcceptorEmail { get; set; }
     }
-    public class SendDataDtoValidator : AbstractValidator<SendFilter> 
+    public class SendDataDtoValidator : AbstractValidator<SendFilterDto> 
     {
         public SendDataDtoValidator()
         {
@@ -40,8 +40,7 @@ namespace ExcelToSql.DTOs
         {
         Segment =1,
         Country,
-        Sales,
-        Discounts,
-
+        Product,
+        Discount,
         }
 }

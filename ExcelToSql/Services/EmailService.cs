@@ -1,6 +1,8 @@
 ﻿using ExcelToSql.Interfaces;
+using Grpc.Core;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Mail;
 using System.Threading.Tasks;
 
@@ -16,15 +18,12 @@ namespace ExcelToSql.Services
             _config = config;
         }
 
-        public bool SendEmail(string email, string subject, string message)
+        public bool SendEmail(string email, string subject, string message,string filename, byte[]bytes)
         {
             var mail = new MailMessage();
             mail.From = new MailAddress(_config.GetSection("MySettings:Mail").Value);
-            
-            string FileName = System.IO.Path.GetFileName(Server.MapPath("excel/Book1.xlsx"));
-            mail.Attachments.Add(new Attachment(FileName));
 
-
+            mail.Attachments.Add(new Attachment(new MemoryStream(bytes), filename));
 
             mail.Subject = subject;
             mail.Body = message;

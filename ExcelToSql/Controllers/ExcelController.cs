@@ -51,27 +51,27 @@ namespace ExcelToSql.Controllers
             using (var stream = new MemoryStream())
             {
                 await file.CopyToAsync(stream);
-                using (var package = new ExcelPackage(stream)) 
-                { 
-                ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
+                using (var package = new ExcelPackage(stream))
+                {
+                    ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
                     var rowcount = worksheet.Dimension.Rows;
                     for (int row = 2; row <= rowcount; row++)
                     {
                         Example example = new Example();
-                       
-                        example.Segment = worksheet.Cells[row,1].Value.ToString().Trim();
-                        example.Country = worksheet.Cells[row,2].Value.ToString().Trim();
-                        example.Product=worksheet.Cells[row,3].Value.ToString().Trim();
-                        example.DiscountBrand = worksheet.Cells[row,4].Value.ToString().Trim();
-                        example.UnitsSold =double.Parse(worksheet.Cells[row, 5].Value.ToString().Trim());
+
+                        example.Segment = worksheet.Cells[row, 1].Value.ToString().Trim();
+                        example.Country = worksheet.Cells[row, 2].Value.ToString().Trim();
+                        example.Product = worksheet.Cells[row, 3].Value.ToString().Trim();
+                        example.DiscountBrand = worksheet.Cells[row, 4].Value.ToString().Trim();
+                        example.UnitsSold = double.Parse(worksheet.Cells[row, 5].Value.ToString().Trim());
                         example.Manifactur = double.Parse(worksheet.Cells[row, 6].Value.ToString().Trim());
                         example.SalePrice = double.Parse(worksheet.Cells[row, 7].Value.ToString().Trim());
-                        example.GrossSales=double.Parse(worksheet.Cells[row, 8].Value.ToString().Trim());
-                        example.Discounts=double.Parse(worksheet.Cells[row, 9].Value.ToString().Trim());
-                        example.Sales=double.Parse(worksheet.Cells[row,10].Value.ToString().Trim());
-                        example.COGS=double.Parse(worksheet.Cells[row,11].Value.ToString().Trim());
-                        example.Profit=double.Parse(worksheet.Cells[row,12].Value.ToString().Trim());
-                        example.Date=DateTime.Parse(worksheet.Cells[row,13].Value.ToString().Trim());
+                        example.GrossSales = double.Parse(worksheet.Cells[row, 8].Value.ToString().Trim());
+                        example.Discounts = double.Parse(worksheet.Cells[row, 9].Value.ToString().Trim());
+                        example.Sales = double.Parse(worksheet.Cells[row, 10].Value.ToString().Trim());
+                        example.COGS = double.Parse(worksheet.Cells[row, 11].Value.ToString().Trim());
+                        example.Profit = double.Parse(worksheet.Cells[row, 12].Value.ToString().Trim());
+                        example.Date = DateTime.Parse(worksheet.Cells[row, 13].Value.ToString().Trim());
 
                         await _con.AddAsync(example);
                     }
@@ -80,7 +80,7 @@ namespace ExcelToSql.Controllers
                 await _con.SaveChangesAsync(true);
 
             }
-            return StatusCode(201,"datas saved to sql");
+            return StatusCode(201, "datas saved to sql");
         }
         /// <summary>
         /// Get Methods
@@ -89,47 +89,48 @@ namespace ExcelToSql.Controllers
         /// <param name="type"></param>
         /// <returns></returns>
         [HttpGet]
-        public async Task<IActionResult> SendRepo([FromQuery] SendFilterDto filter, [FromQuery] SendType type)
+        public async Task< IActionResult> SendRepo([FromQuery] SendFilterDto filter, [FromQuery] SendType type)
         {
             List<ReturnDataDto> dataList = new List<ReturnDataDto>();
             var datas = await _con.Examples.Where(e => e.Date <= filter.EndData && e.Date >= filter.StartData).AsQueryable().AsNoTracking().ToListAsync();
             switch (type)
             {
                 case SendType.Segment:
-                    datas.GroupBy(d => d.Segment).Select(data => new ReturnDataDto
-                    {
-                        Count = data.Count(),
-                        totalProfits = data.Sum(x => x.Profit),
-                        totalDiscounts = data.Sum(x => x.Discounts),
-                        totalSales = data.Sum(x => x.Sales),
-                    }).ToList();
+
+                   dataList= datas.GroupBy(d => d.Segment)
+                        .Select(data => new ReturnDataDto
+                        {
+                            Name = data.Key,
+                            Count = data.Key.Count(),
+                            totalProfits = data.Sum(x => x.Profit),
+                            totalDiscounts = data.Sum(x => x.Discounts),
+                            totalSales = data.Sum(x => x.Sales),
+                        }).ToList();
                     break;
                 case SendType.Country:
-                    datas.GroupBy(d => d.Country).Select(data => new ReturnDataDto
-                    {
-                        Count = data.Count(),
-                        totalProfits = data.Sum(x => x.Profit),
-                        totalDiscounts = data.Sum(x => x.Discounts),
-                        totalSales = data.Sum(x => x.Sales),
-                    }).ToList();
+                  dataList = datas.GroupBy(d => d.Country)
+                        .Select(data => new ReturnDataDto
+                        {
+                            Name= data.Key,
+                            Count = data.Key.Count(),
+                            totalProfits = data.Sum(x => x.Profit),
+                            totalDiscounts = data.Sum(x => x.Discounts),
+                            totalSales = data.Sum(x => x.Sales),
+                        }).ToList();
                     break;
                 case SendType.Product:
-                    datas.GroupBy(d => d.Product).Select(data => new ReturnDataDto
-                    {
-                        Count = data.Count(),
-                        totalProfits = data.Sum(x => x.Profit),
-                        totalDiscounts = data.Sum(x => x.Discounts),
-                        totalSales = data.Sum(x => x.Sales),
-                    }).ToList();
+                  dataList=  datas.GroupBy(d => d.Product)
+                        .Select(data => new ReturnDataDto
+                        {
+                            Name=data.Key,
+                            Count = data.Key.Count(),
+                            totalProfits = data.Sum(x => x.Profit),
+                            totalDiscounts = data.Sum(x => x.Discounts),
+                            totalSales = data.Sum(x => x.Sales),
+                        }).ToList();
                     break;
                 case SendType.Discount:
-                    ReturnDataDto data = new ReturnDataDto();
-                    foreach (var item in datas.OrderBy(p => p.Product).ToList())
-                    {
-                        data.totalDiscounts = 1 - (item.SalePrice - item.Discounts) / 100;
-                        //data.totalDiscounts = 100 * (item.Discounts / item.salePrice);
-                        dataList.Add(data);
-                    }
+                   
                     break;
                 default:
                     break;
